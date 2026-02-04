@@ -1,0 +1,48 @@
+currentOption = String => 
+
+{
+example value = 2ad
+Format <current Question Number> <Chosen option> <Correct option>
+}
+
+currentSubject = String 
+
+{
+    the current Highlighted subject;
+
+}
+
+currentQuestion = int {
+    the current Question number;
+    example value 1
+}
+
+answeredQuestons = List[] =>
+used in groupvalue of the radio button
+{
+    example value = 2ad
+    Format <current Question Number> <Chosen option> <Correct option>
+}
+
+THE RADIO TILES
+for an option to be thicked, the value must be same
+as the group value.
+
+hence, i used a list "answeredQuestons" to store the answered Questions
+in a format of [question number, option letter (a,b,c,d) and correct answer]
+when there is no corresponding string for a list of options in a radio tile
+all radios maintain their value, else, we set the group value to the one that 
+matches the one in the answeredQuestons to thick the option.
+
+i will be adding subject in front of it now. because it is not just about the 
+[question number, option letter (a,b,c,d) and correct answer] now it wil be
+[subject, question number, option letter (a,b,c,d) and correct answer]
+
+
+NEW INSIGHTS
+1. Total Attempted
+2. Total Attempted in each courses
+3. Total Correct
+4. Total Wrong
+5. Total Mark in each courses
+6. Total overal mark
