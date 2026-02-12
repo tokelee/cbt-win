@@ -1,6 +1,7 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cbt_software_win/database/helper/app_database_helper.dart';
 import 'package:cbt_software_win/database/json/subject_json.dart';
-import 'package:cbt_software_win/database/json/topic_json.dart';
 import 'package:cbt_software_win/providers/lesson_state_provider.dart';
 import 'package:cbt_software_win/providers/selected_subjects_provider.dart';
 import 'package:cbt_software_win/screens/lesson/jamb/cutomize_lesson.dart';
@@ -9,8 +10,6 @@ import 'package:cbt_software_win/screens/lesson/jamb/test_screen/practice.dart';
 import 'package:cbt_software_win/screens/lesson/jamb/test_screen/study.dart';
 import 'package:cbt_software_win/widgets/button.dart';
 import 'package:cbt_software_win/widgets/navbar.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 class SelectJambCourse extends StatefulWidget {
   const SelectJambCourse({super.key});
@@ -20,550 +19,182 @@ class SelectJambCourse extends StatefulWidget {
 }
 
 class _SelectJambCourseState extends State<SelectJambCourse> {
-  // Set<String> generalSubjects = {
-  //   "Use of English",
-  //   "Mathematics",
-  //   "Agricultural Science",
-  //   "Civic Education",
-  //   "Geography",
-  //   "Economics",
-  // };
-
-  // Set<String> scienceSubjects = {
-  //   "Physics",
-  //   "Chemistry",
-  //   "Biology",
-  //   "Further Mathematics",
-  // };
-  // Set<String> businessSubjects = {
-  //   "Financial Accounting",
-  //   "Commerce",
-  //   "Government",
-  //   "Book Keeping",
-  // };
-  // Set<String> humanitySubjects = {
-  //   "Literature in English",
-  //   "History",
-  //   "Yoruba",
-  //   "Igbo",
-  //   "Hausa",
-  // };
-  // Set<String> selectedCourses = {"Use of English"};
-  Set<String> selectedCourses = {};
-
-  AppDatabaseHelper db = AppDatabaseHelper();
-
-  final String getTopicForSubject = "Nil";
+  final Set<String> selectedCourses = {};
+  final AppDatabaseHelper db = AppDatabaseHelper();
 
   late Future<List<SubjectJson>> generalSubjects;
   late Future<List<SubjectJson>> scienceSubjects;
   late Future<List<SubjectJson>> businessSubjects;
   late Future<List<SubjectJson>> humanitySubjects;
-  late Future<List<TopicJson>> subjectTopics;
 
   @override
   void initState() {
     super.initState();
-    generalSubjects = fetchSubjects("general");
-    scienceSubjects = fetchSubjects("science");
-    businessSubjects = fetchSubjects("business");
-    humanitySubjects = fetchSubjects("humanity");
-    subjectTopics = fetchTopics(getTopicForSubject);
+    _loadData();
   }
 
-  Future<List<SubjectJson>> fetchSubjects(String department) async {
-    return await db.getSubjects(department);
+  void _loadData() {
+    generalSubjects = db.getSubjects("general");
+    scienceSubjects = db.getSubjects("science");
+    businessSubjects = db.getSubjects("business");
+    humanitySubjects = db.getSubjects("humanity");
   }
 
-  Future<List<TopicJson>> fetchTopics(String subject) async {
-    return await db.getTopics(subject);
+  void _toggleSubject(String subjectName) {
+    setState(() {
+      if (selectedCourses.contains(subjectName)) {
+        selectedCourses.remove(subjectName);
+      } else if (selectedCourses.length < 4) {
+        selectedCourses.add(subjectName);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You can only select up to 4 subjects")),
+        );
+      }
+    });
+    // Sync with Provider
+    context.read<SelectedSubject>().changeSubject(newSelectedSubjects: selectedCourses);
+  }
+
+  void _handleNavigation(String type) {
+    Widget target;
+    if (type == "study") {
+      target = const StudyScreen();
+    } else if (type == "practice") target = const PractiseTestScreen();
+    else if (type == "mock") target = const MockScreen();
+    else return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => target),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final deviceWidth = MediaQuery.of(context).size.width;
-    final deviceHeight = MediaQuery.of(context).size.height;
-
-    // final lessonMode = context.watch<LessonStateProvider>().lessonStateItems.lessonMode;
-
-    // bool containsScienceSubject =
-    //     selectedCourses.any((item) => scienceSubjects.contains(item));
-    // bool containsBusinessSubject =
-    //     selectedCourses.any((item) => businessSubjects.contains(item));
-    // bool containsHumanitySubject =
-    //     selectedCourses.any((item) => humanitySubjects.contains(item));
-
-    final lessonType =
-        context.watch<LessonStateProvider>().lessonStateItems.lessonType;
-
-    final lessonMode =
-        context.watch<LessonStateProvider>().lessonStateItems.lessonMode;
+    final lessonState = context.watch<LessonStateProvider>().lessonStateItems;
+    final isCustomized = lessonState.lessonMode == "customized";
 
     return Scaffold(
       backgroundColor: const Color.fromRGBO(240, 255, 255, 1),
-      body: Column(children: [
-        const Navbar(),
-        const SizedBox(height: 50),
-        ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: deviceWidth * 0.9,
-              maxHeight: deviceHeight * 0.8,
-              maxWidth: deviceWidth * 0.9,
-            ),
-            child: Container(
-                decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
+      body: Column(
+        children: [
+          const Navbar(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10.0),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.grey.withOpacity(0.3),
-                          spreadRadius: 1,
-                          blurRadius: 7,
-                          offset: const Offset(0, 0))
-                    ]),
-                child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  icon: const Icon(Icons.arrow_back_ios),
-                                  label: const Text("Back"),
-                                  style: buttonAppTheme,
-                                ),
-                                if(lessonMode == "standard")
-                                ElevatedButton.icon(
-                                  onPressed: selectedCourses.isEmpty
-                                      ? null
-                                      : () {
-                                          if (lessonType == "study") {
-                                            Navigator.of(context)
-                                                .pushAndRemoveUntil(
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const StudyScreen()),
-                                              (Route<dynamic> route) => false,
-                                            );
-                                            return;
-                                          } 
-                                          else if (lessonType == "practice") {
-                                            Navigator.of(context)
-                                                .pushAndRemoveUntil(
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const PractiseTestScreen()),
-                                              (Route<dynamic> route) => false,
-                                            );
-                                            return;
-                                          } else if (lessonType == "mock") {
-                                            Navigator.of(context)
-                                                .pushAndRemoveUntil(
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const PractiseTestScreen()),
-                                              (Route<dynamic> route) => false,
-                                            );
-                                            return;
-                                          }
-                                        },
-                                  icon: const Icon(Icons.start,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Start Lesson",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  style: buttonSuccess,
-                                ),
-                                if(lessonMode == "customized")
-                                ElevatedButton.icon(
-                                  onPressed: selectedCourses.isEmpty
-                                      ? null
-                                      : () {
-                                          
-                                            Navigator.of(context)
-                                                .push(
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const CustomizeLessonScreen())
-                                            );
-                                            return;
-                                          
-                                        },
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Customize Lesson",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  style: buttonDefault,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(
-                              width: double.infinity,
-                              child: Text(
-                                "Select subjects",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 20.0,
-                            ),
-                            const Text("General Subjects",
-                                style: TextStyle(
-                                    fontSize: 17.0,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(
-                              height: 10.0,
-                            ),
-                            Container(
-                              child: FutureBuilder(
-                                  future: generalSubjects,
-                                  builder: (BuildContext builder,
-                                      AsyncSnapshot<List<SubjectJson>>
-                                          snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                          child: CircularProgressIndicator());
-                                    }
-                                    if (snapshot.hasError) {
-                                      return Text(snapshot.error.toString());
-                                    } else {
-                                      if (snapshot.data!.isEmpty) {
-                                        return const Center(
-                                          child: Text("No subject to display"),
-                                        );
-                                      } else {
-                                        final subjects = snapshot.data!;
-                                        return Wrap(children: [
-                                          for (SubjectJson subject in subjects)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  right: 10.0, bottom: 10.0),
-                                              child: FilterChip(
-                                                  label: Text(subject.subject),
-                                                  selected:
-                                                      selectedCourses.contains(
-                                                          subject.subject),
-                                                  onSelected: (bool value) {
-                                                    context
-                                                        .read<SelectedSubject>()
-                                                        .changeSubject(
-                                                            newSelectedSubjects:
-                                                                selectedCourses);
-                                                    setState(() {
-                                                      if (!selectedCourses
-                                                              .contains(subject
-                                                                  .subject) &&
-                                                          selectedCourses
-                                                                  .length <
-                                                              4) {
-                                                        selectedCourses.add(
-                                                            subject.subject);
-                                                      } else {
-                                                        selectedCourses.remove(
-                                                            subject.subject);
-                                                      }
-                                                    });
-                                                  }),
-                                            )
-                                        ]);
-                                      }
-                                    }
-                                  }),
-                             
-                            ),
-                            const Text("Science",
-                                style: TextStyle(
-                                    fontSize: 17.0,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(
-                              height: 10.0,
-                            ),
-                            Container(
-                                child: FutureBuilder(
-                                  future: scienceSubjects,
-                                  builder: (BuildContext builder,
-                                      AsyncSnapshot<List<SubjectJson>>
-                                          snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                          child: CircularProgressIndicator());
-                                    }
-                                    if (snapshot.hasError) {
-                                      return Text(snapshot.error.toString());
-                                    } else {
-                                      if (snapshot.data!.isEmpty) {
-                                        return const Center(
-                                          child: Text("No subject to display"),
-                                        );
-                                      } else {
-                                        final subjects = snapshot.data!;
-                                        return Wrap(children: [
-                                          for (SubjectJson subject in subjects)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  right: 10.0, bottom: 10.0),
-                                              child: FilterChip(
-                                                  label: Text(subject.subject),
-                                                  selected:
-                                                      selectedCourses.contains(
-                                                          subject.subject),
-                                                  onSelected: (bool value) {
-                                                    context
-                                                        .read<SelectedSubject>()
-                                                        .changeSubject(
-                                                            newSelectedSubjects:
-                                                                selectedCourses);
-                                                    setState(() {
-                                                      if (!selectedCourses
-                                                              .contains(subject
-                                                                  .subject) &&
-                                                          selectedCourses
-                                                                  .length <
-                                                              4) {
-                                                        selectedCourses.add(
-                                                            subject.subject);
-                                                      } else {
-                                                        selectedCourses.remove(
-                                                            subject.subject);
-                                                      }
-                                                    });
-                                                  }),
-                                            )
-                                        ]);
-                                      }
-                                    }
-                                  }),),
-                            const Text("Business",
-                                style: TextStyle(
-                                    fontSize: 17.0,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(
-                              height: 10.0,
-                            ),
-                            Container(
-                                child: FutureBuilder(
-                                  future: businessSubjects,
-                                  builder: (BuildContext builder,
-                                      AsyncSnapshot<List<SubjectJson>>
-                                          snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                          child: CircularProgressIndicator());
-                                    }
-                                    if (snapshot.hasError) {
-                                      return Text(snapshot.error.toString());
-                                    } else {
-                                      if (snapshot.data!.isEmpty) {
-                                        return const Center(
-                                          child: Text("No subject to display"),
-                                        );
-                                      } else {
-                                        final subjects = snapshot.data!;
-                                        return Wrap(children: [
-                                          for (SubjectJson subject in subjects)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  right: 10.0, bottom: 10.0),
-                                              child: FilterChip(
-                                                  label: Text(subject.subject),
-                                                  selected:
-                                                      selectedCourses.contains(
-                                                          subject.subject),
-                                                  onSelected: (bool value) {
-                                                    context
-                                                        .read<SelectedSubject>()
-                                                        .changeSubject(
-                                                            newSelectedSubjects:
-                                                                selectedCourses);
-                                                    setState(() {
-                                                      if (!selectedCourses
-                                                              .contains(subject
-                                                                  .subject) &&
-                                                          selectedCourses
-                                                                  .length <
-                                                              4) {
-                                                        selectedCourses.add(
-                                                            subject.subject);
-                                                      } else {
-                                                        selectedCourses.remove(
-                                                            subject.subject);
-                                                      }
-                                                    });
-                                                  }),
-                                            )
-                                        ]);
-                                      }
-                                    }
-                                  }),),
-                            const Text("Humanity",
-                                style: TextStyle(
-                                    fontSize: 17.0,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(
-                              height: 10.0,
-                            ),
-                            Container(
-                                child: FutureBuilder(
-                                  future: humanitySubjects,
-                                  builder: (BuildContext builder,
-                                      AsyncSnapshot<List<SubjectJson>>
-                                          snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                          child: CircularProgressIndicator());
-                                    }
-                                    if (snapshot.hasError) {
-                                      return Text(snapshot.error.toString());
-                                    } else {
-                                      if (snapshot.data!.isEmpty) {
-                                        return const Center(
-                                          child: Text("No subject to display"),
-                                        );
-                                      } else {
-                                        final subjects = snapshot.data!;
-                                        return Wrap(children: [
-                                          for (SubjectJson subject in subjects)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  right: 10.0, bottom: 10.0),
-                                              child: FilterChip(
-                                                  label: Text(subject.subject),
-                                                  selected:
-                                                      selectedCourses.contains(
-                                                          subject.subject),
-                                                  onSelected: (bool value) {
-                                                    context
-                                                        .read<SelectedSubject>()
-                                                        .changeSubject(
-                                                            newSelectedSubjects:
-                                                                selectedCourses);
-                                                    setState(() {
-                                                      if (!selectedCourses
-                                                              .contains(subject
-                                                                  .subject) &&
-                                                          selectedCourses
-                                                                  .length <
-                                                              4) {
-                                                        selectedCourses.add(
-                                                            subject.subject);
-                                                      } else {
-                                                        selectedCourses.remove(
-                                                            subject.subject);
-                                                      }
-                                                    });
-                                                  }),
-                                            )
-                                        ]);
-                                      }
-                                    }
-                                  }),),
-                            const Text("Topics",
-                                style: TextStyle(
-                                    fontSize: 17.0,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(
-                              height: 10.0,
-                            ),
-                           
-                            const SizedBox(
-                              height: 50.0,
-                            ),
-                            
-                            Container(
-                              width: double.infinity,
-                              alignment: Alignment.centerRight,
-                              child: Column(children: [
-                                if(lessonMode == "standard")
-                                ElevatedButton.icon(
-                                onPressed: selectedCourses.isEmpty
-                                    ? null
-                                    : () {
-                                        if (lessonType == "study") {
-                                          Navigator.of(context)
-                                              .pushAndRemoveUntil(
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const StudyScreen()),
-                                            (Route<dynamic> route) => false,
-                                          );
-                                          return;
-                                        } else if (lessonType == "practice") {
-                                          Navigator.of(context)
-                                              .pushAndRemoveUntil(
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const PractiseTestScreen()),
-                                            (Route<dynamic> route) => false,
-                                          );
-                                          return;
-                                        } else if (lessonType == "mock") {
-                                          Navigator.of(context)
-                                              .pushAndRemoveUntil(
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const MockScreen()),
-                                            (Route<dynamic> route) => false,
-                                          );
-                                          return;
-                                        }
-                                      },
-                                icon: const Icon(Icons.start,
-                                    color: Colors.white),
-                                label: const Text(
-                                  "Start Lesson",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                style: buttonSuccess,
-                              ),
+                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 7)],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(isCustomized, lessonState.lessonType),
+                      const SizedBox(height: 20),
+                      Text(
+                        "Selected: ${selectedCourses.length} / 4",
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                      ),
+                      const Divider(),
+                      _buildSubjectSection("General Subjects", generalSubjects),
+                      _buildSubjectSection("Science", scienceSubjects),
+                      _buildSubjectSection("Business", businessSubjects),
+                      _buildSubjectSection("Humanity", humanitySubjects),
+                      const SizedBox(height: 30),
+                      _buildFooterAction(isCustomized, lessonState.lessonType),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                              if(lessonMode == "customized")
-                                ElevatedButton.icon(
-                                  onPressed: selectedCourses.isEmpty
-                                      ? null
-                                      : () {
-                                          
-                                            Navigator.of(context)
-                                                .push(
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const CustomizeLessonScreen())
-                                            );
-                                            return;
-                                          
-                                        },
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Customize Lesson",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  style: buttonDefault,
-                                ),
+  Widget _buildHeader(bool isCustomized, String lessonType) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        ElevatedButton.icon(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, size: 16),
+          label: const Text("Back"),
+          style: buttonAppTheme,
+        ),
+        const Text("Select Subjects", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        _buildTopAction(isCustomized, lessonType),
+      ],
+    );
+  }
 
-                              ],)
-                              
-                              
-                            ),
-                            
-                          ],
-                        )))))
-      ]),
+  Widget _buildTopAction(bool isCustomized, String lessonType) {
+    if (selectedCourses.isEmpty) return const SizedBox.shrink();
+    
+    return isCustomized 
+      ? ElevatedButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CustomizeLessonScreen())),
+          icon: const Icon(Icons.edit, color: Colors.white),
+          label: const Text("Customize", style: TextStyle(color: Colors.white)),
+          style: buttonDefault,
+        )
+      : ElevatedButton.icon(
+          onPressed: () => _handleNavigation(lessonType),
+          icon: const Icon(Icons.start, color: Colors.white),
+          label: const Text("Start", style: TextStyle(color: Colors.white)),
+          style: buttonSuccess,
+        );
+  }
+
+  Widget _buildSubjectSection(String title, Future<List<SubjectJson>> future) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10.0),
+          child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+        ),
+        FutureBuilder<List<SubjectJson>>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const LinearProgressIndicator();
+            }
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Text("No subjects available");
+            }
+
+            return Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: snapshot.data!.map((subject) {
+                final isSelected = selectedCourses.contains(subject.subject);
+                return FilterChip(
+                  label: Text(subject.subject),
+                  selected: isSelected,
+                  selectedColor: Colors.blue.withOpacity(0.2),
+                  checkmarkColor: Colors.blue,
+                  onSelected: (_) => _toggleSubject(subject.subject),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooterAction(bool isCustomized, String lessonType) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: _buildTopAction(isCustomized, lessonType),
     );
   }
 }

@@ -4,7 +4,6 @@ import 'package:cbt_software_win/database/json/topc_response_json.dart';
 import 'package:cbt_software_win/database/json/topic_json.dart';
 import 'package:cbt_software_win/providers/lesson_state_provider.dart';
 import 'package:cbt_software_win/providers/selected_subjects_provider.dart';
-import 'package:cbt_software_win/screens/lesson/jamb/test_screen/mock.dart';
 import 'package:cbt_software_win/screens/lesson/jamb/test_screen/practice.dart';
 import 'package:cbt_software_win/screens/lesson/jamb/test_screen/study.dart';
 import 'package:cbt_software_win/widgets/button.dart';

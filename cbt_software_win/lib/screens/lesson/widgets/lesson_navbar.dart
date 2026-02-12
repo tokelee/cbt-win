@@ -59,7 +59,7 @@ class LessonNavbar extends StatelessWidget {
                     builder: (context) => const HomeScreen(),
                   ));
                   return;
-                };
+                }
                 },
               child: Container(
                 decoration: BoxDecoration(

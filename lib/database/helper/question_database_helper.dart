@@ -1,75 +1,40 @@
 import 'dart:convert';
-
-import 'package:cbt_software_win/database/json/question_json.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io' as io;
 import 'package:path/path.dart' as p;
-
-Future<void> createSubjectTable(Database db, String subject) async {
-  try {
-    await db.execute('''
-  CREATE TABLE IF NOT EXISTS $subject (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    question TEXT NOT NULL UNIQUE,
-    optionA TEXT NOT NULL,
-    optionB TEXT NOT NULL,
-    optionC TEXT NOT NULL,
-    optionD TEXT NOT NULL,
-    answer TEXT NOT NULL,
-    topic TEXT NOT NULL,
-    mark TEXT,
-    type TEXT,
-    externalLinkUrl TEXT,
-    isActive TEXT,
-    section TEXT NOT NULL,
-    imageName TEXT,
-    instruction TEXT NOT NULL,
-    explanation TEXT NOT NULL,
-    createAt TEXT
-  )
-''');
-  } catch (e) {
-    return;
-  }
-  print('$subject table created!');
-}
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:cbt_software_win/database/json/question_json.dart';
 
 class JambDatabaseHelper {
-  final jambDatabaseName = "CBTSoftwareJAMB.db";
-
+  final dbName = "CBTSoftwareQuestions.db";
   Database? _database;
 
-// Database connection
-  Future<Database> init() async {
-    // final databasePath = await getApplicationCacheDirectory();
-    final io.Directory appDocumentsDir =
-        await getApplicationCacheDirectory();
-
-    // Create path for database
-    String dbPath = p.join(appDocumentsDir.path, "databases", jambDatabaseName);
-    return openDatabase(dbPath, version: 1, onCreate: (db, version) async {
-      // Tables
-      // await db.execute(englishQuestionsTable);
-      await createAllTables(db);
-    });
-  }
-
-  Future<void> createAllTables(Database db) async {
-    List<String> subjects = [
-      'useOfEnglish',
-      'mathematics',
-      'physics',
-      'chemistry',
-      'biology',
-      'geography',
-      // 'financialAccounting'
-    ];
-    for (String subject in subjects) {
-      await createSubjectTable(db, subject);
-    }
-
-  }
+  // The Single Table Warehouse
+  final String createTableQuery = '''
+    CREATE TABLE IF NOT EXISTS questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      unique_id TEXT UNIQUE,     -- e.g., 'math_2024_01'
+      subject TEXT NOT NULL,     
+      year TEXT NOT NULL,        
+      question TEXT NOT NULL,    
+      optionA TEXT,
+      optionB TEXT,
+      optionC TEXT,
+      optionD TEXT,
+      answer TEXT,
+      topic TEXT,
+      mark TEXT,
+      type TEXT,
+      isObjective INTEGER DEFAULT 1, -- 1 for OBJ (A,B,C,D), 0 for Theory
+      externalLinkUrl TEXT,
+      isActive TEXT,
+      section TEXT,              
+      imageName TEXT,
+      instruction TEXT,
+      explanation TEXT,
+      createdAt TEXT
+    )
+  ''';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -77,62 +42,108 @@ class JambDatabaseHelper {
     return _database!;
   }
 
-  // CRUD Methods
+  Future<Database> init() async {
+    // Switched to DocumentsDirectory for permanent offline storage
+    final io.Directory appDocumentsDir = await getApplicationDocumentsDirectory();
+    String dbPath = p.join(appDocumentsDir.path, "databases", dbName);
 
-    // Default Database command
-     Future<void> defaultCommand() async {
-    try {
-      final Database db = await database;
-      await db.rawQuery("SELECT 1+1 AS result");
-      // return result.map((e) => UserJson.fromMap(e)).toList();
-      
-    } catch (e) {
-      print('Error: $e');
+    if (!await io.Directory(p.dirname(dbPath)).exists()) {
+      await io.Directory(p.dirname(dbPath)).create(recursive: true);
     }
+
+    return openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute(createTableQuery);
+        
+        // Speed Optimization: Creating Indexes
+        await db.execute('CREATE INDEX idx_subject ON questions (subject)');
+        await db.execute('CREATE INDEX idx_is_obj ON questions (isObjective)');
+        print("Database Initialized with Indexes");
+      },
+    );
   }
 
-  // Get
-  Future<List<QuestionsJson>> getQuestions(String tableName) async {
+  // --- FETCH METHODS ---
+
+  /// 1. getQuestions: Used for Study Mode or Topic-based practice.
+  /// You can filter by subject, and optionally by year or topic.
+  Future<List<QuestionsJson>> getQuestions(String subject, {String? year, String? topic}) async {
     try {
       final db = await database;
-      List<Map<String, Object?>> result = await db.query(tableName);
-    
+      
+      String whereClause = "subject = ?";
+      List<dynamic> whereArgs = [subject];
+
+      if (year != null) {
+        whereClause += " AND year = ?";
+        whereArgs.add(year);
+      }
+      if (topic != null) {
+        whereClause += " AND topic = ?";
+        whereArgs.add(topic);
+      }
+
+      List<Map<String, Object?>> result = await db.query(
+        "questions",
+        where: whereClause,
+        whereArgs: whereArgs,
+        orderBy: "id ASC", 
+      );
+
       return result.map((e) => QuestionsJson.fromMap(e)).toList();
     } catch (e) {
+      print("Error in getQuestions: $e");
       return [];
     }
   }
 
-  // Insert
-  Future<int> insertQuestion(QuestionsJson question, String tableName) async {
-    // final Database db = await init();
+  /// 2. getRandomQuestions: The "Exam Engine".
+  /// Picks random questions. Default is 50 Objective questions.
+  Future<List<QuestionsJson>> getRandomQuestions({
+    required String subject,
+    int limit = 50,
+    bool objectiveOnly = true,
+  }) async {
     try {
       final db = await database;
-      return db.insert(tableName, question.toMap());
+
+      // RANDOM() is highly efficient in SQLite when combined with an index
+      List<Map<String, Object?>> result = await db.query(
+        "questions",
+        where: "subject = ? AND isObjective = ?",
+        whereArgs: [subject, objectiveOnly ? 1 : 0],
+        orderBy: "RANDOM()",
+        limit: limit,
+      );
+
+      return result.map((e) => QuestionsJson.fromMap(e)).toList();
     } catch (e) {
-      return -1;
+      print("Error in getRandomQuestions: $e");
+      return [];
     }
-    
   }
 
-  // Insert multiple questions
-  Future<void> insertQuestions(String tableName, String questionsInJson) async {
-    // final Database db = await init();
-    final List<dynamic> jsonData = json.decode(questionsInJson);
+  // --- INSERT METHODS ---
+
+  Future<void> insertBulkQuestions(String jsonString) async {
+    final List<dynamic> jsonData = json.decode(jsonString);
     final List<QuestionsJson> questions = jsonData.map((item) => QuestionsJson.fromMap(item)).toList();
+
+    final Database db = await database;
     
-    
-      final Database db = await init();
-      Batch batch = db.batch();
-      for(var question in questions){
-        batch.insert(tableName, question.toMap());
-        print(question.question);
+    // Transactions ensure that if the PC shuts down, the DB doesn't get corrupted
+    await db.transaction((txn) async {
+      Batch batch = txn.batch();
+      for (var q in questions) {
+        batch.insert(
+          "questions", 
+          q.toMap(), 
+          conflictAlgorithm: ConflictAlgorithm.replace // Updates if unique_id exists
+        );
       }
-      try {
-        await batch.commit(noResult: true);
-      } catch (e) {
-        print("Failed to commit. $e");
-      }
-      
+      await batch.commit(noResult: true);
+    });
   }
 }

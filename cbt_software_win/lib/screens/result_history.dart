@@ -4,7 +4,7 @@ import 'package:cbt_software_win/database/json/resultHistory/ssce.dart';
 import 'package:cbt_software_win/widgets/button.dart';
 import 'package:cbt_software_win/widgets/navbar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+
 
 class ResultHistory extends StatefulWidget {
   const ResultHistory({super.key});
@@ -120,7 +120,7 @@ class _ResultHistoryState extends State<ResultHistory> {
                                 Container(
                                   margin: const EdgeInsets.only(right: 8.0),
                                   child: FilterChip(
-                                      label: Text("Jamb"),
+                                      label: const Text("Jamb"),
                                       selected: (examType == "jamb"),
                                       onSelected: (bool value) {
                                         setState(() {
@@ -132,7 +132,7 @@ class _ResultHistoryState extends State<ResultHistory> {
                                 Container(
                                   margin: const EdgeInsets.only(right: 8.0),
                                   child: FilterChip(
-                                      label: Text("WAEC"),
+                                      label: const Text("WAEC"),
                                       selected: (examType == "waec"),
                                       onSelected: (bool value) {
                                         setState(() {
@@ -144,7 +144,7 @@ class _ResultHistoryState extends State<ResultHistory> {
                                 Container(
                                   margin: const EdgeInsets.only(right: 8.0),
                                   child: FilterChip(
-                                      label: Text("NECO"),
+                                      label: const Text("NECO"),
                                       selected: (examType == "neco"),
                                       onSelected: (bool value) {
                                         setState(() {

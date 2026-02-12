@@ -4,7 +4,6 @@ import 'package:cbt_software_win/database/json/resultHistory/ssce.dart';
 import 'package:cbt_software_win/widgets/button.dart';
 import 'package:cbt_software_win/widgets/navbar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 class ResultHistory extends StatefulWidget {
   const ResultHistory({super.key});
