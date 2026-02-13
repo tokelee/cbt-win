@@ -32,7 +32,9 @@ class JambDatabaseHelper {
       imageName TEXT,
       instruction TEXT,
       explanation TEXT,
-      createdAt TEXT
+      isDeleted INTEGER DEFAULT 0,
+      createdAt TEXT,
+      updatedAt TEXT
     )
   ''';
 
@@ -149,23 +151,34 @@ class JambDatabaseHelper {
 
   // --- INSERT METHODS ---
 
-  Future<void> insertBulkQuestions(String jsonString) async {
-    final List<dynamic> jsonData = json.decode(jsonString);
-    final List<QuestionsJson> questions =
-        jsonData.map((item) => QuestionsJson.fromMap(item)).toList();
+  // Future<void> insertBulkQuestions(String jsonString) async {
+  //   final List<dynamic> jsonData = json.decode(jsonString);
+  //   final List<QuestionsJson> questions =
+  //       jsonData.map((item) => QuestionsJson.fromMap(item)).toList();
 
-    final Database db = await database;
+  //   final Database db = await database;
 
-    // Transactions ensure that if the PC shuts down, the DB doesn't get corrupted
+  //   // Transactions ensure that if the PC shuts down, the DB doesn't get corrupted
+  //   await db.transaction((txn) async {
+  //     Batch batch = txn.batch();
+  //     for (var q in questions) {
+  //       batch.insert("questions", q.toMap(),
+  //           conflictAlgorithm:
+  //               ConflictAlgorithm.replace // Updates if unique_id exists
+  //           );
+  //     }
+  //     await batch.commit(noResult: true);
+  //   });
+  // }
+
+  // Suggested optimization for your helper
+  Future<void> insertBulkQuestions(List<Map<String, dynamic>> questions) async {
+    final db = await database;
     await db.transaction((txn) async {
-      Batch batch = txn.batch();
       for (var q in questions) {
-        batch.insert("questions", q.toMap(),
-            conflictAlgorithm:
-                ConflictAlgorithm.replace // Updates if unique_id exists
-            );
+        await txn.insert('questions', q,
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
-      await batch.commit(noResult: true);
     });
   }
 }

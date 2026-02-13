@@ -22,10 +22,12 @@ class QuestionsJson {
     final String isActive;
     final String instruction;
     final String explanation;
-    final String createAt;
+    final String createdAt;
+    final String updatedAt;
     final String subject;
     final String year;
     final bool isObjective;
+    final bool isDeleted;
 
     QuestionsJson({
         // this.id,
@@ -45,10 +47,12 @@ class QuestionsJson {
         required this.isActive,
         required this.instruction,
         required this.explanation,
-        required this.createAt,
+        required this.createdAt,
+        required this.updatedAt,
         required this.year,
         required this.subject,
         required this.isObjective,
+        required this.isDeleted,
     });
 
     factory QuestionsJson.fromMap(Map<String, dynamic> json) => QuestionsJson(
@@ -68,11 +72,13 @@ class QuestionsJson {
         isActive: json["isActive"].toString(),
         instruction: json["instruction"],
         explanation: json["explanation"],
-        createAt: json["createAt"],
+        createdAt: json["createdAt"],
+        updatedAt: json["updatedAt"],
         uniqueId: json['unique_id'] ?? "", 
         subject: json['subject'] ?? "",
         year: json['year'] ?? "",
         isObjective: json['isObjective'] == 1 || json['isObjective'] == true,
+        isDeleted: json['isDeleted'] == 1 || json['isDeleted'] == true,
     );
 
     Map<String, dynamic> toMap() => {
@@ -92,10 +98,12 @@ class QuestionsJson {
         "isActive": isActive,
         "instruction": instruction,
         "explanation": explanation,
-        "createAt": createAt,
+        "createAt": createdAt,
+        "updatedAt": updatedAt,
         'unique_id': uniqueId,
         'subject': subject,
         'year': year,
         'isObjective': isObjective ? 1 : 0,
+        'isDeleted': isDeleted ? 1 : 0,
     };
 }
