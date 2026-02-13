@@ -6,7 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:cbt_software_win/database/json/question_json.dart';
 
 class JambDatabaseHelper {
-  final dbName = "CBTSoftwareQuestions.db";
+  final questionDbName = "dat_00921_quest.dat";
   Database? _database;
 
   // The Single Table Warehouse
@@ -44,8 +44,10 @@ class JambDatabaseHelper {
 
   Future<Database> init() async {
     // Switched to DocumentsDirectory for permanent offline storage
-    final io.Directory appDocumentsDir = await getApplicationDocumentsDirectory();
-    String dbPath = p.join(appDocumentsDir.path, "databases", dbName);
+    final io.Directory appDocumentsDir =
+        await getApplicationDocumentsDirectory();
+    String dbPath =
+        p.join(appDocumentsDir.path, "System", "Config", questionDbName);
 
     if (!await io.Directory(p.dirname(dbPath)).exists()) {
       await io.Directory(p.dirname(dbPath)).create(recursive: true);
@@ -53,13 +55,32 @@ class JambDatabaseHelper {
 
     return openDatabase(
       dbPath,
-      version: 1,
+      version: 1, //change this version to 2
+      onConfigure: (db) async {
+        await db.execute('PRAGMA journal_mode = WAL');
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
+      // onUpgrade: (db, oldVersion, newVersion) async {   to upgrade change the version to 2
+      //   // This runs for OLD users who already have version 1
+      //   if (oldVersion < 2) {
+      //     // Add the new column without deleting their data
+      //     await db.execute(
+      //         "ALTER TABLE questions ADD COLUMN difficulty_level TEXT;");
+
+      //     // Or add a new table
+      //     await db.execute("CREATE TABLE IF NOT EXISTS bookmarks (...);");
+      //     print("Database upgraded to Version 2");
+      //   }
+      // },
       onCreate: (db, version) async {
         await db.execute(createTableQuery);
-        
+
         // Speed Optimization: Creating Indexes
         await db.execute('CREATE INDEX idx_subject ON questions (subject)');
+        await db.execute('CREATE INDEX idx_year ON questions (year)');
+        await db.execute('CREATE INDEX idx_topic ON questions (topic)');
         await db.execute('CREATE INDEX idx_is_obj ON questions (isObjective)');
+        await db.execute('CREATE INDEX idx_unique_id ON questions (unique_id)');
         print("Database Initialized with Indexes");
       },
     );
@@ -69,10 +90,11 @@ class JambDatabaseHelper {
 
   /// 1. getQuestions: Used for Study Mode or Topic-based practice.
   /// You can filter by subject, and optionally by year or topic.
-  Future<List<QuestionsJson>> getQuestions(String subject, {String? year, String? topic}) async {
+  Future<List<QuestionsJson>> getQuestions(String subject,
+      {String? year, String? topic}) async {
     try {
       final db = await database;
-      
+
       String whereClause = "subject = ?";
       List<dynamic> whereArgs = [subject];
 
@@ -89,7 +111,7 @@ class JambDatabaseHelper {
         "questions",
         where: whereClause,
         whereArgs: whereArgs,
-        orderBy: "id ASC", 
+        orderBy: "id ASC",
       );
 
       return result.map((e) => QuestionsJson.fromMap(e)).toList();
@@ -129,19 +151,19 @@ class JambDatabaseHelper {
 
   Future<void> insertBulkQuestions(String jsonString) async {
     final List<dynamic> jsonData = json.decode(jsonString);
-    final List<QuestionsJson> questions = jsonData.map((item) => QuestionsJson.fromMap(item)).toList();
+    final List<QuestionsJson> questions =
+        jsonData.map((item) => QuestionsJson.fromMap(item)).toList();
 
     final Database db = await database;
-    
+
     // Transactions ensure that if the PC shuts down, the DB doesn't get corrupted
     await db.transaction((txn) async {
       Batch batch = txn.batch();
       for (var q in questions) {
-        batch.insert(
-          "questions", 
-          q.toMap(), 
-          conflictAlgorithm: ConflictAlgorithm.replace // Updates if unique_id exists
-        );
+        batch.insert("questions", q.toMap(),
+            conflictAlgorithm:
+                ConflictAlgorithm.replace // Updates if unique_id exists
+            );
       }
       await batch.commit(noResult: true);
     });

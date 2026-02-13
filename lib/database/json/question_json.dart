@@ -6,6 +6,7 @@ String questionsJsonToMap(QuestionsJson data) => json.encode(data.toMap());
 
 class QuestionsJson {
     // final String? id;
+    final String uniqueId; //Essential for preventing duplicates during updates e.g math_2025_001 -> subject_year_questionNum
     final String question;
     final String optionA;
     final String optionB;
@@ -22,9 +23,13 @@ class QuestionsJson {
     final String instruction;
     final String explanation;
     final String createAt;
+    final String subject;
+    final String year;
+    final bool isObjective;
 
     QuestionsJson({
         // this.id,
+        required this.uniqueId,
         required this.question,
         required this.optionA,
         required this.optionB,
@@ -41,6 +46,9 @@ class QuestionsJson {
         required this.instruction,
         required this.explanation,
         required this.createAt,
+        required this.year,
+        required this.subject,
+        required this.isObjective,
     });
 
     factory QuestionsJson.fromMap(Map<String, dynamic> json) => QuestionsJson(
@@ -61,6 +69,10 @@ class QuestionsJson {
         instruction: json["instruction"],
         explanation: json["explanation"],
         createAt: json["createAt"],
+        uniqueId: json['unique_id'] ?? "", 
+        subject: json['subject'] ?? "",
+        year: json['year'] ?? "",
+        isObjective: json['isObjective'] == 1 || json['isObjective'] == true,
     );
 
     Map<String, dynamic> toMap() => {
@@ -81,5 +93,9 @@ class QuestionsJson {
         "instruction": instruction,
         "explanation": explanation,
         "createAt": createAt,
+        'unique_id': uniqueId,
+        'subject': subject,
+        'year': year,
+        'isObjective': isObjective ? 1 : 0,
     };
 }
