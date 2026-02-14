@@ -11,7 +11,7 @@ import 'dart:io' as io;
 import 'package:path/path.dart' as p;
 
 class AppDatabaseHelper {
-  final userDatabaseName = "dat_00921_user.dat";
+  final userDatabaseName = "dat_00921.dat";
 
   Database? _database;
 
@@ -39,8 +39,9 @@ class AppDatabaseHelper {
  CREATE TABLE IF NOT EXISTS topics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     topic TEXT NOT NULL UNIQUE,
-    subject TEXT,
+    subject_id INTEGER,
     createdAt TEXT
+    FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
   )
   """;
 
@@ -48,10 +49,11 @@ class AppDatabaseHelper {
  CREATE TABLE IF NOT EXISTS jambResultHistory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     subjectAndScore TEXT,
-    username TEXT,
+    user_id INTEGER,
     totalSubject TEXT,
     score TEXT,
     createdAt TEXT
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
   )
   """;
 
@@ -79,15 +81,15 @@ class AppDatabaseHelper {
     final io.Directory appDocumentsDir =
         await getApplicationDocumentsDirectory();
     // Create path for database
-    String dbPath = p.join(appDocumentsDir.path, "System", "Config", userDatabaseName);
+    String dbPath =
+        p.join(appDocumentsDir.path, "System", "Config", userDatabaseName);
 
     return openDatabase(dbPath, version: 1, onConfigure: (db) async {
       // 1. Enable Foreign Keys
       await db.execute('PRAGMA foreign_keys = ON');
-      
+
       // 2. Enable WAL Mode for speed and concurrency
       await db.execute('PRAGMA journal_mode = WAL');
-
     }, onCreate: (db, version) async {
       // Tables
       try {
@@ -128,8 +130,6 @@ class AppDatabaseHelper {
       return [];
     }
   }
-
-
 
   // Get many
   Future<List<SSCEResultHistoryJson>> getAllSSCEResultHistory() async {
@@ -242,8 +242,11 @@ class AppDatabaseHelper {
     try {
       final Database db = await database;
       if (subject.isNotEmpty) {
-        List<Map<String, Object?>> result =
-            await db.rawQuery("SELECT * FROM topics WHERE subject='$subject'");
+        List<Map<String, Object?>> result = await db.query(
+          "topics",
+          where: subject.isNotEmpty ? "subject = ?" : null,
+          whereArgs: subject.isNotEmpty ? [subject] : null,
+        );
         return result.map((e) => TopicJson.fromMap(e)).toList();
       }
       List<Map<String, Object?>> result =

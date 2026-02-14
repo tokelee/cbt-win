@@ -1,4 +1,4 @@
-import 'dart:convert';
+// import 'dart:convert';
 import 'dart:io' as io;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -97,14 +97,14 @@ class JambDatabaseHelper {
     try {
       final db = await database;
 
-      String whereClause = "subject = ?";
+      String whereClause = "subject = ? AND isDeleted = 0";
       List<dynamic> whereArgs = [subject];
 
-      if (year != null) {
+      if (year != null && year.isNotEmpty) {
         whereClause += " AND year = ?";
         whereArgs.add(year);
       }
-      if (topic != null) {
+      if (topic != null && topic.isNotEmpty) {
         whereClause += " AND topic = ?";
         whereArgs.add(topic);
       }
